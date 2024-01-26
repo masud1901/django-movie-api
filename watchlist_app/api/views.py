@@ -14,56 +14,66 @@ from rest_framework.views import APIView
 from rest_framework import mixins
 
 
-class WatchListAV(APIView):
-    def get(self, request):
-        watchlist = WatchList.objects.all()
-        serializer = WatchListSerializer(watchlist, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        serializer = WatchListSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+class WatchListAV(generics.ListCreateAPIView):
+    queryset = WatchList.objects.all()
+    serializer_class = WatchListSerializer
 
 
-class WatchListDetailsAV(APIView):
-    def get(self, request, pk):
-        try:
-            content = WatchList.objects.get(pk=pk)
-        except WatchList.DoesNotExist:
-            return Response(
-                {"Error": "The content is not listed!"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        serializer = WatchListSerializer(content)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+class WatchListDetailsAV(generics.RetrieveUpdateDestroyAPIView):
+    queryset = WatchList.objects.all()
+    serializer_class = WatchListSerializer
 
-    def put(self, request, pk):
-        try:
-            content = WatchList.objects.get(pk=pk)
-        except WatchList.DoesNotExist:
-            return Response(
-                {"Error": "The content is not listed!"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        serializer = WatchListSerializer(content, data=request.data, partial=True)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def delete(self, request, pk):
-        try:
-            content = WatchList.objects.get(pk=pk)
-        except WatchList.DoesNotExist:
-            return Response(
-                {"Error": "The content is not listed!"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        content.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+# class WatchListAV(APIView):
+#     def get(self, request):
+#         watchlist = WatchList.objects.all()
+#         serializer = WatchListSerializer(watchlist, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+#     def post(self, request):
+#         serializer = WatchListSerializer(data=request.data)
+#         if not serializer.is_valid():
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         serializer.save()
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+# class WatchListDetailsAV(APIView):
+#     def get(self, request, pk):
+#         try:
+#             content = WatchList.objects.get(pk=pk)
+#         except WatchList.DoesNotExist:
+#             return Response(
+#                 {"Error": "The content is not listed!"},
+#                 status=status.HTTP_404_NOT_FOUND,
+#             )
+#         serializer = WatchListSerializer(content)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+#     def put(self, request, pk):
+#         try:
+#             content = WatchList.objects.get(pk=pk)
+#         except WatchList.DoesNotExist:
+#             return Response(
+#                 {"Error": "The content is not listed!"},
+#                 status=status.HTTP_404_NOT_FOUND,
+#             )
+#         serializer = WatchListSerializer(content, data=request.data, partial=True)
+#         if not serializer.is_valid():
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         serializer.save()
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+#     def delete(self, request, pk):
+#         try:
+#             content = WatchList.objects.get(pk=pk)
+#         except WatchList.DoesNotExist:
+#             return Response(
+#                 {"Error": "The content is not listed!"},
+#                 status=status.HTTP_404_NOT_FOUND,
+#             )
+#         content.delete()
+#         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class StreamPlatformAV(APIView):
