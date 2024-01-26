@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework import mixins
 from rest_framework import viewsets
+from rest_framework import exceptions
 
 
 class WatchListAV(generics.ListCreateAPIView):
@@ -80,7 +81,6 @@ class WatchListDetailsAV(generics.RetrieveUpdateDestroyAPIView):
 class StreamPlatformVS(viewsets.ModelViewSet):
     queryset = StreamPlatform.objects.all()
     serializer_class = StreamPlatformSerializer
-
 
 
 # class StreamPlatformAV(APIView):
@@ -161,4 +161,12 @@ class ReviewCreate(generics.CreateAPIView):
     def perform_create(self, serializer):
         pk = self.kwargs.get("pk")
         watchlist = WatchList.objects.get(pk=pk)
-        serializer.save(watchlist=watchlist)
+
+        user = self.request.user
+        review_queryset = Review.objects.filter(review_user=user, watchlist=watchlist)
+        if review_queryset.exists():
+            raise exceptions.ValidationError(
+                {"Error": "You have already reviewed this content!"}
+            )
+
+        serializer.save(watchlist=watchlist, review_user=user)
