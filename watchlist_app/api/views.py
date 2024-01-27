@@ -9,6 +9,7 @@ from watchlist_app.api.serializers import (
     StreamPlatformSerializer,
     ReviewSerializer,
 )
+from django.db import transaction
 from rest_framework.decorators import api_view
 from rest_framework import status
 from rest_framework.views import APIView
@@ -166,13 +167,43 @@ class ReviewDetail(
         return self.update(request, *args, **kwargs)
 
 
+# class ReviewCreate(generics.CreateAPIView):
+#     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+#     serializer_class = ReviewSerializer
+
+#     def perform_create(self, serializer):
+#         pk = self.kwargs.get("pk")
+#         watchlist = WatchList.objects.get(pk=pk)
+
+#         user = self.request.user
+#         review_queryset = Review.objects.filter(review_user=user, watchlist=watchlist)
+#         if review_queryset.exists():
+#             raise exceptions.ValidationError(
+#                 {"Error": "You have already reviewed this content!"}
+#             )
+#         if watchlist.number_of_rating == 0:
+#             watchlist.avg_rating = serializer.validated_data["rating"]
+#         else:
+#             watchlist.avg_rating = (
+#                 watchlist.avg_rating + serializer.validated_data["rating"]
+#             ) / (watchlist.number_of_rating + 1)
+
+#         watchlist.number_of_rating = watchlist.number_of_rating + 1
+#         watchlist.save()
+#         serializer.save(watchlist=watchlist, review_user=user)
+
+
+from django.db import transaction
+
+
 class ReviewCreate(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     serializer_class = ReviewSerializer
 
+    @transaction.atomic
     def perform_create(self, serializer):
         pk = self.kwargs.get("pk")
-        watchlist = WatchList.objects.get(pk=pk)
+        watchlist, created = WatchList.objects.get_or_create(pk=pk)
 
         user = self.request.user
         review_queryset = Review.objects.filter(review_user=user, watchlist=watchlist)
@@ -181,4 +212,14 @@ class ReviewCreate(generics.CreateAPIView):
                 {"Error": "You have already reviewed this content!"}
             )
 
+        rating = serializer.validated_data["rating"]
+        if created or watchlist.number_of_rating == 0:
+            watchlist.avg_rating = rating
+        else:
+            watchlist.avg_rating = (
+                watchlist.avg_rating * watchlist.number_of_rating + rating
+            ) / (watchlist.number_of_rating + 1)
+
+        watchlist.number_of_rating += 1
+        watchlist.save(update_fields=["avg_rating", "number_of_rating"])
         serializer.save(watchlist=watchlist, review_user=user)
