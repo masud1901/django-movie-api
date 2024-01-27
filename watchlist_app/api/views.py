@@ -1,3 +1,4 @@
+from watchlist_app.api.permissions import AdminReadOnly, ReviewUserOrReadOnly
 from watchlist_app.models import WatchList, StreamPlatform, Review
 from rest_framework.response import Response
 from django.shortcuts import render
@@ -14,6 +15,7 @@ from rest_framework.views import APIView
 from rest_framework import mixins
 from rest_framework import viewsets
 from rest_framework import exceptions
+from rest_framework import permissions
 
 
 class WatchListAV(generics.ListCreateAPIView):
@@ -79,6 +81,7 @@ class WatchListDetailsAV(generics.RetrieveUpdateDestroyAPIView):
 
 
 class StreamPlatformVS(viewsets.ModelViewSet):
+    permission_classes = [AdminReadOnly]
     queryset = StreamPlatform.objects.all()
     serializer_class = StreamPlatformSerializer
 
@@ -136,6 +139,8 @@ class StreamPlatformVS(viewsets.ModelViewSet):
 
 
 class ReviewList(mixins.ListModelMixin, generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
     # queryset = Review.objects.all()
     def get_queryset(self):
         pk = self.kwargs["pk"]
@@ -147,15 +152,22 @@ class ReviewList(mixins.ListModelMixin, generics.GenericAPIView):
         return self.list(request, *args, **kwargs)
 
 
-class ReviewDetail(mixins.RetrieveModelMixin, generics.GenericAPIView):
+class ReviewDetail(
+    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView
+):
+    permission_classes = [ReviewUserOrReadOnly]
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
 
     def get(self, request, *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)
 
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
 
 class ReviewCreate(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     serializer_class = ReviewSerializer
 
     def perform_create(self, serializer):
