@@ -9,6 +9,8 @@ from watchlist_app.api.serializers import (
     StreamPlatformSerializer,
     ReviewSerializer,
 )
+from django.contrib.auth import views as auth_views
+
 from django.db import transaction
 from rest_framework.decorators import api_view
 from rest_framework import status
@@ -140,7 +142,7 @@ class StreamPlatformVS(viewsets.ModelViewSet):
 
 
 class ReviewList(mixins.ListModelMixin, generics.GenericAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
 
     # queryset = Review.objects.all()
     def get_queryset(self):

@@ -35,7 +35,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("watch/", include("watchlist_app.api.urls")),
-    path("api-auth/", include("rest_framework.urls")),
+    path('account/',include("user_app.api.urls")),
     path(
         "swagger/",
         schema_view.with_ui("swagger", cache_timeout=0),
