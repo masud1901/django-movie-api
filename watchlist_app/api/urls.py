@@ -13,7 +13,7 @@ from watchlist_app.api.views import (
 from rest_framework import routers
 
 router = routers.DefaultRouter()
-router.register("stream/", StreamPlatformVS, basename="stream-platform")
+router.register("stream", StreamPlatformVS, basename="stream-platform")
 
 urlpatterns = [
     path("list/", WatchListAV.as_view(), name="watchlist"),

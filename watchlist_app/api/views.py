@@ -1,4 +1,4 @@
-from watchlist_app.api.permissions import AdminReadOnly, ReviewUserOrReadOnly
+from watchlist_app.api.permissions import IsAdminOrReadOnly, ReviewUserOrReadOnly
 from watchlist_app.models import WatchList, StreamPlatform, Review
 from rest_framework.response import Response
 from django.shortcuts import render
@@ -9,6 +9,7 @@ from watchlist_app.api.serializers import (
     StreamPlatformSerializer,
     ReviewSerializer,
 )
+
 from django.contrib.auth import views as auth_views
 
 from django.db import transaction
@@ -22,11 +23,15 @@ from rest_framework import permissions
 
 
 class WatchListAV(generics.ListCreateAPIView):
+    permission_classes = [IsAdminOrReadOnly, permissions.IsAuthenticated]
     queryset = WatchList.objects.all()
     serializer_class = WatchListSerializer
 
 
-class WatchListDetailsAV(generics.RetrieveUpdateDestroyAPIView):
+class WatchListDetailsAV(
+    generics.RetrieveUpdateDestroyAPIView,
+):
+    permission_classes = [IsAdminOrReadOnly, permissions.IsAuthenticated]
     queryset = WatchList.objects.all()
     serializer_class = WatchListSerializer
 
@@ -84,7 +89,7 @@ class WatchListDetailsAV(generics.RetrieveUpdateDestroyAPIView):
 
 
 class StreamPlatformVS(viewsets.ModelViewSet):
-    permission_classes = [AdminReadOnly]
+    permission_classes = [IsAdminOrReadOnly, permissions.IsAuthenticated]
     queryset = StreamPlatform.objects.all()
     serializer_class = StreamPlatformSerializer
 
@@ -156,9 +161,12 @@ class ReviewList(mixins.ListModelMixin, generics.GenericAPIView):
 
 
 class ReviewDetail(
-    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    generics.GenericAPIView,
 ):
-    permission_classes = [ReviewUserOrReadOnly]
+    permission_classes = [ReviewUserOrReadOnly, permissions.IsAuthenticated]
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
 
@@ -166,7 +174,31 @@ class ReviewDetail(
         return self.retrieve(request, *args, **kwargs)
 
     def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
+        review = self.get_object()
+        old_rating = review.rating
+        response = self.update(request, *args, **kwargs)
+
+        if response.status_code == 200:  # If the update was successful
+            new_rating = response.data.get("rating")
+            watchlist = review.watchlist
+            watchlist.avg_rating = (
+                watchlist.avg_rating
+                - (old_rating - new_rating) / watchlist.number_of_rating
+            )
+            watchlist.save(update_fields=["avg_rating"])
+
+        return response
+
+    def delete(self, request, *args, **kwargs):
+        review = self.get_object()
+        old_rating = review.rating
+        watchlist = review.watchlist
+        watchlist.avg_rating = (
+            (watchlist.avg_rating * watchlist.number_of_rating) - old_rating
+        ) / (watchlist.number_of_rating - 1)
+        watchlist.number_of_rating -= 1
+        watchlist.save(update_fields=["avg_rating", "number_of_rating"])
+        return self.destroy(request, *args, **kwargs)
 
 
 # class ReviewCreate(generics.CreateAPIView):
@@ -195,7 +227,33 @@ class ReviewDetail(
 #         serializer.save(watchlist=watchlist, review_user=user)
 
 
-from django.db import transaction
+# class ReviewCreate(generics.CreateAPIView):
+#     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+#     serializer_class = ReviewSerializer
+
+#     @transaction.atomic
+#     def perform_create(self, serializer):
+#         pk = self.kwargs.get("pk")
+#         watchlist, created = WatchList.objects.get_or_create(pk=pk)
+
+#         user = self.request.user
+#         review_queryset = Review.objects.filter(review_user=user, watchlist=watchlist)
+#         if review_queryset.exists():
+#             raise exceptions.ValidationError(
+#                 {"Error": "You have already reviewed this content!"}
+#             )
+
+#         rating = serializer.validated_data["rating"]
+#         if created or watchlist.number_of_rating == 0:
+#             watchlist.avg_rating = rating
+#         else:
+#             watchlist.avg_rating = (
+#                 watchlist.avg_rating * watchlist.number_of_rating + rating
+#             ) / (watchlist.number_of_rating + 1)
+
+#         watchlist.number_of_rating += 1
+#         watchlist.save(update_fields=["avg_rating", "number_of_rating"])
+#         serializer.save(watchlist=watchlist, review_user=user)
 
 
 class ReviewCreate(generics.CreateAPIView):
@@ -205,23 +263,19 @@ class ReviewCreate(generics.CreateAPIView):
     @transaction.atomic
     def perform_create(self, serializer):
         pk = self.kwargs.get("pk")
-        watchlist, created = WatchList.objects.get_or_create(pk=pk)
+        watchlist = WatchList.objects.select_related("review").get(pk=pk)
 
         user = self.request.user
-        review_queryset = Review.objects.filter(review_user=user, watchlist=watchlist)
-        if review_queryset.exists():
-            raise exceptions.ValidationError(
-                {"Error": "You have already reviewed this content!"}
+        if watchlist.review.filter(review_user=user).exists():
+            return Response(
+                {"Error": "You have already reviewed this content!"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         rating = serializer.validated_data["rating"]
-        if created or watchlist.number_of_rating == 0:
-            watchlist.avg_rating = rating
-        else:
-            watchlist.avg_rating = (
-                watchlist.avg_rating * watchlist.number_of_rating + rating
-            ) / (watchlist.number_of_rating + 1)
-
-        watchlist.number_of_rating += 1
+        average = watchlist.avg_rating
+        old_noOfRatings = watchlist.number_of_rating
+        watchlist.avg_rating = average - (average - rating) / (old_noOfRatings + 1)
+        watchlist.number_of_rating = old_noOfRatings + 1
         watchlist.save(update_fields=["avg_rating", "number_of_rating"])
         serializer.save(watchlist=watchlist, review_user=user)
