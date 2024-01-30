@@ -23,7 +23,7 @@ from rest_framework import permissions
 
 
 class WatchListAV(generics.ListCreateAPIView):
-    permission_classes = [IsAdminOrReadOnly, permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
     queryset = WatchList.objects.all()
     serializer_class = WatchListSerializer
 
@@ -31,7 +31,7 @@ class WatchListAV(generics.ListCreateAPIView):
 class WatchListDetailsAV(
     generics.RetrieveUpdateDestroyAPIView,
 ):
-    permission_classes = [IsAdminOrReadOnly, permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
     queryset = WatchList.objects.all()
     serializer_class = WatchListSerializer
 

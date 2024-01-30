@@ -3,9 +3,11 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 from user_app.api.serialisers import RegistrationSerializer
 from rest_framework.authtoken.models import Token
-from user_app import models
+
+# from user_app import models
 from rest_framework.decorators import authentication_classes
-from rest_framework import mixins,generics,permissions
+from rest_framework import mixins, generics, permissions
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # @api_view(["POST"])
 # def registration_view(request):
@@ -30,8 +32,25 @@ from rest_framework import mixins,generics,permissions
 class RegistrationView(mixins.CreateModelMixin, generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = RegistrationSerializer
+
     def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        headers = self.get_success_headers(serializer.data)
+        account = serializer.save()
+        data = {}
+        refresh = RefreshToken.for_user(account)
+
+        data = {
+            "username": account.username,
+            "email": account.email,
+            "refresh_token": str(refresh),
+            "access_token": str(refresh.access_token),
+            "response": "Registration Successful!",
+        }
+
+        return Response(data=data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 @api_view(["POST"])
 def logout_view(request):
