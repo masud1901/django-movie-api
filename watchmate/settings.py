@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     "watchlist_app",
     "rest_framework",
     "drf_yasg",
-    'rest_framework.authtoken'
+    "rest_framework.authtoken",
 ]
 
 MIDDLEWARE = [
@@ -130,5 +130,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
-    ]
+    ],
+    # "DEFAULT_THROTTLE_CLASSES": [
+    #     "rest_framework.throttling.AnonRateThrottle",
+    #     "rest_framework.throttling.UserRateThrottle",
+    # ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "20/day",
+        "user": "300/day",
+        "review-create": "10/day",
+        "review-list": "100/day",
+        "stream": "5/day",
+    },
 }

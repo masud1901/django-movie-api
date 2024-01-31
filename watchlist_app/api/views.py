@@ -20,10 +20,13 @@ from rest_framework import mixins
 from rest_framework import viewsets
 from rest_framework import exceptions
 from rest_framework import permissions
+from rest_framework.throttling import AnonRateThrottle,UserRateThrottle,ScopedRateThrottle
+from watchlist_app.api.throtling import ReviewCreateThrottle, ReviewListThrottle
 
 
 class WatchListAV(generics.ListCreateAPIView):
-    permission_classes = [IsAdminOrReadOnly, permissions.IsAuthenticated]
+    throttle_classes = [AnonRateThrottle]
+    permission_classes = [IsAdminOrReadOnly]
     queryset = WatchList.objects.all()
     serializer_class = WatchListSerializer
 
@@ -89,6 +92,8 @@ class WatchListDetailsAV(
 
 
 class StreamPlatformVS(viewsets.ModelViewSet):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'stream'
     permission_classes = [IsAdminOrReadOnly, permissions.IsAuthenticated]
     queryset = StreamPlatform.objects.all()
     serializer_class = StreamPlatformSerializer
@@ -148,6 +153,7 @@ class StreamPlatformVS(viewsets.ModelViewSet):
 
 class ReviewList(mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ReviewListThrottle]
 
     # queryset = Review.objects.all()
     def get_queryset(self):
@@ -251,22 +257,22 @@ class ReviewDetail(
 #                 watchlist.avg_rating * watchlist.number_of_rating + rating
 #             ) / (watchlist.number_of_rating + 1)
 
+
 #         watchlist.number_of_rating += 1
 #         watchlist.save(update_fields=["avg_rating", "number_of_rating"])
 #         serializer.save(watchlist=watchlist, review_user=user)
-
-
 class ReviewCreate(generics.CreateAPIView):
+    throttle_classes = [ReviewCreateThrottle]
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     serializer_class = ReviewSerializer
 
     @transaction.atomic
     def perform_create(self, serializer):
         pk = self.kwargs.get("pk")
-        watchlist = WatchList.objects.select_related("review").get(pk=pk)
+        watchlist = WatchList.objects.get(pk=pk)
 
         user = self.request.user
-        if watchlist.review.filter(review_user=user).exists():
+        if watchlist.reviews.filter(review_user=user).exists():
             return Response(
                 {"Error": "You have already reviewed this content!"},
                 status=status.HTTP_400_BAD_REQUEST,
