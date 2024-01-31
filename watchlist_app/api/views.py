@@ -20,8 +20,13 @@ from rest_framework import mixins
 from rest_framework import viewsets
 from rest_framework import exceptions
 from rest_framework import permissions
-from rest_framework.throttling import AnonRateThrottle,UserRateThrottle,ScopedRateThrottle
+from rest_framework.throttling import (
+    AnonRateThrottle,
+    UserRateThrottle,
+    ScopedRateThrottle,
+)
 from watchlist_app.api.throtling import ReviewCreateThrottle, ReviewListThrottle
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class WatchListAV(generics.ListCreateAPIView):
@@ -93,7 +98,7 @@ class WatchListDetailsAV(
 
 class StreamPlatformVS(viewsets.ModelViewSet):
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = 'stream'
+    throttle_scope = "stream"
     permission_classes = [IsAdminOrReadOnly, permissions.IsAuthenticated]
     queryset = StreamPlatform.objects.all()
     serializer_class = StreamPlatformSerializer
@@ -154,8 +159,9 @@ class StreamPlatformVS(viewsets.ModelViewSet):
 class ReviewList(mixins.ListModelMixin, generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [ReviewListThrottle]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["review_user__username", "active"]
 
-    # queryset = Review.objects.all()
     def get_queryset(self):
         pk = self.kwargs["pk"]
         return Review.objects.filter(watchlist=pk)
