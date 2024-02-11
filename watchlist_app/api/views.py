@@ -9,6 +9,7 @@ from watchlist_app.api.serializers import (
     StreamPlatformSerializer,
     ReviewSerializer,
 )
+from user_app.api.pagination import WatchListPagination,WatchListLOPagination,WatchListPaginationCursor
 
 from django.contrib.auth import views as auth_views
 
@@ -40,6 +41,20 @@ class WatchListDetailsAV(
     generics.RetrieveUpdateDestroyAPIView,
 ):
     permission_classes = [IsAdminOrReadOnly, permissions.IsAuthenticated]
+    queryset = WatchList.objects.all()
+    serializer_class = WatchListSerializer
+
+
+class WatchListVS(viewsets.ModelViewSet):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "watch-list"
+    permission_classes = [
+        IsAdminOrReadOnly,
+        #   permissions.IsAuthenticated
+    ]
+    # pagination_class = WatchListPagination
+    pagination_class = WatchListPaginationCursor
+    # pagination_class = WatchListLOPagination
     queryset = WatchList.objects.all()
     serializer_class = WatchListSerializer
 

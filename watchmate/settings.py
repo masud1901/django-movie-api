@@ -142,5 +142,12 @@ REST_FRAMEWORK = {
         "review-create": "10/day",
         "review-list": "100/day",
         "stream": "5/day",
+        "watch-list": "100/day",
     },
+    # "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    # "PAGE_SIZE": 2,
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        # "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
 }

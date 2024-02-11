@@ -14,11 +14,16 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 class WatchListSerializer(serializers.ModelSerializer):
     # reviews = ReviewSerializer(many=True, read_only=True)
-    platform = serializers.CharField(source="platform.name")
+    # platform = serializers.CharField(source="platform.name", read_only=True)
 
     class Meta:
         model = WatchList
         fields = "__all__"
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["platform"] = instance.platform.name
+        return representation
 
 
 class StreamPlatformSerializer(serializers.ModelSerializer):

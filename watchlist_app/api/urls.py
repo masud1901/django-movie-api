@@ -8,19 +8,20 @@ from watchlist_app.api.views import (
     ReviewList,
     ReviewDetail,
     ReviewCreate,
+    WatchListVS
 )
 
 from rest_framework import routers
 
 router = routers.DefaultRouter()
 router.register("stream", StreamPlatformVS, basename="stream-platform")
+router.register("list", WatchListVS, basename="watch-list")
+
 
 urlpatterns = [
-    path("list/", WatchListAV.as_view(), name="watchlist"),
-    path("<int:pk>/", WatchListDetailsAV.as_view(), name="watchlist-details"),
     path("", include(router.urls)),
-    # path("stream/", StreamPlatformAV.as_view(), name="stream"),
-    # path("stream/<int:pk>", StreamPlatformDetailAV.as_view(), name="stream-details"),
+    # path("list/", WatchListAV.as_view(), name="watchlist"),
+    # path("<int:pk>/", WatchListDetailsAV.as_view(), name="watchlist-details"),
     path("<int:pk>/review-create/", ReviewCreate.as_view(), name="review-create"),
     path(
         "<int:pk>/review/",
